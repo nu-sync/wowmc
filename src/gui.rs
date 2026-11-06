@@ -55,8 +55,8 @@ fn set_theme(ctx: &egui::Context) {
     style.visuals.extreme_bg_color = SURFACE;
     style.visuals.faint_bg_color = Color32::from_rgb(244, 247, 251);
     style.visuals.selection.bg_fill = ACCENT_LIGHT;
-    style.visuals.selection.stroke = Stroke::new(1.5, ACCENT);
-    style.visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, BORDER);
+    style.visuals.selection.stroke = Stroke::new(1.5_f32, ACCENT);
+    style.visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0_f32, BORDER);
     for widget in [
         &mut style.visuals.widgets.inactive,
         &mut style.visuals.widgets.hovered,
@@ -66,12 +66,12 @@ fn set_theme(ctx: &egui::Context) {
     }
     style.visuals.widgets.inactive.bg_fill = SURFACE;
     style.visuals.widgets.inactive.weak_bg_fill = SURFACE;
-    style.visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, BORDER);
+    style.visuals.widgets.inactive.bg_stroke = Stroke::new(1.0_f32, BORDER);
     style.visuals.widgets.hovered.bg_fill = ACCENT_LIGHT;
     style.visuals.widgets.hovered.weak_bg_fill = ACCENT_LIGHT;
-    style.visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, ACCENT);
+    style.visuals.widgets.hovered.bg_stroke = Stroke::new(1.0_f32, ACCENT);
     style.visuals.widgets.active.bg_fill = ACCENT_LIGHT;
-    style.visuals.widgets.active.bg_stroke = Stroke::new(1.5, ACCENT);
+    style.visuals.widgets.active.bg_stroke = Stroke::new(1.5_f32, ACCENT);
     style.spacing.item_spacing = Vec2::new(10.0, 10.0);
     style.spacing.button_padding = Vec2::new(13.0, 8.0);
     style.spacing.interact_size.y = 36.0;
@@ -118,7 +118,7 @@ fn muted(ui: &mut egui::Ui, text: impl Into<String>) {
 fn card() -> Frame {
     Frame::new()
         .fill(SURFACE)
-        .stroke(Stroke::new(1.0, BORDER))
+        .stroke(Stroke::new(1.0_f32, BORDER))
         .corner_radius(10)
         .inner_margin(Margin::same(24))
 }
@@ -573,7 +573,7 @@ impl eframe::App for App {
             .frame(
                 Frame::new()
                     .fill(SURFACE)
-                    .stroke(Stroke::new(1.0, BORDER))
+                    .stroke(Stroke::new(1.0_f32, BORDER))
                     .inner_margin(Margin::symmetric(20, 8)),
             )
             .show(ctx, |ui| {
