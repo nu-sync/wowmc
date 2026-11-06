@@ -1,0 +1,14 @@
+---
+title: "Conflicting library writes"
+---
+stateDiagram-v2
+  s0: Both opened the same library
+  s1: First change saved
+  s2: Second save rejected
+  s3: Second writer reloads
+  s4: Both changes saved
+  [*] --> s0
+  s0 --> s1: first writer saves
+  s1 --> s2: stale save rejected
+  s2 --> s3: reload and reapply
+  s3 --> s4: save again

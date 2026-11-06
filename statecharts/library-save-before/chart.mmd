@@ -1,0 +1,36 @@
+---
+title: "Saving while keeping a useful backup"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks UnchangedKeepsRecovery
+    lg1: Path to the UnchangedKeepsRecovery bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: Unchanged macro
+  s1: Edited macro
+  s2: Unchanged save failed
+  s3: File edited outside wowmc
+  s4: Unchanged#59; recovery backup overwritten
+  s5: Edited save failed
+  s6: Edit saved#59; previous version backed up
+  s7: Conflict detected#59; draft kept
+  s8: Save failed after external edit
+  [*] --> s0
+  [*] --> s1
+  s0 --> s2: write cannot begin
+  s0 --> s3: another tool edits the file
+  s0 --> s4: save
+  s1 --> s5: write cannot begin
+  s1 --> s3: another tool edits the file
+  s1 --> s6: save
+  s2 --> s0: retry
+  s3 --> s7: save detects conflict
+  s3 --> s8: write cannot begin
+  s5 --> s1: retry
+  s8 --> s3: retry
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s4 breaks
+  class s4 bugPath

@@ -1,0 +1,14 @@
+---
+title: "Importing a local snapshot"
+---
+stateDiagram-v2
+  s0: No preview
+  s1: Preview ready
+  s2: Imported into library
+  s3: Import failed#59; preview retained
+  [*] --> s0
+  s0 --> s1: preview snapshot
+  s1 --> s2: import new names
+  s1 --> s3: write fails
+  s2 --> s1: preview again
+  s3 --> s1: retry

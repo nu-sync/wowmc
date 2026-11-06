@@ -1,0 +1,20 @@
+---
+title: "Restoring a cache backup"
+---
+stateDiagram-v2
+  s0: Malformed backup selected
+  s1: Other valid backup selected
+  s2: Backup with wowmc-check selected
+  s3: Ready to restore
+  s4: Malformed backup rejected
+  s5: Restore failed#59; original kept
+  s6: Restored#59; undo backup saved
+  [*] --> s0
+  [*] --> s1
+  [*] --> s2
+  s0 --> s4: preview backup
+  s1 --> s3: preview backup
+  s2 --> s3: preview backup
+  s3 --> s5: write cannot begin
+  s3 --> s6: apply restore
+  s5 --> s3: retry

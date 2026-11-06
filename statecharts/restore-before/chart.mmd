@@ -1,0 +1,31 @@
+---
+title: "Restoring a cache backup"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks ValidBackupAccepted
+    lg1: Path to the ValidBackupAccepted bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: Malformed backup selected
+  s1: Other valid backup selected
+  s2: Backup with wowmc-check selected
+  s3: Ready to restore
+  s4: Malformed backup rejected
+  s5: Valid backup rejected
+  s6: Restore failed#59; original kept
+  s7: Restored#59; undo backup saved
+  [*] --> s0
+  [*] --> s1
+  [*] --> s2
+  s0 --> s4: preview backup
+  s1 --> s3: preview backup
+  s2 --> s5: preview backup
+  s3 --> s6: write cannot begin
+  s3 --> s7: apply restore
+  s6 --> s3: retry
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s2 bugPath
+  class s5 breaks
+  class s5 bugPath

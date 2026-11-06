@@ -1,0 +1,17 @@
+---
+title: "Cache writes and recovery"
+---
+stateDiagram-v2
+  s0: No change staged
+  s1: Change ready for review
+  s2: Write failed
+  s3: Cache written with backup
+  s4: Backup restored
+  [*] --> s0
+  s0 --> s1: preview
+  s1 --> s2: write fails
+  s1 --> s3: write and keep backup
+  s2 --> s1: retry
+  s3 --> s1: preview another change
+  s3 --> s4: restore backup
+  s4 --> s1: preview another change

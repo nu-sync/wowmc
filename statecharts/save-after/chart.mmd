@@ -1,0 +1,19 @@
+---
+title: "Editing and saving a macro"
+---
+stateDiagram-v2
+  s0: Saved library
+  s1: Unsaved draft
+  s2: Close confirmation
+  s3: Save failed#59; draft retained
+  s4: Closed after discard
+  [*] --> s0
+  s0 --> s1: edit
+  s1 --> s0: discard changes or save succeeds
+  s1 --> s2: close with unsaved changes
+  s1 --> s3: save fails
+  s2 --> s1: keep editing
+  s2 --> s4: discard and close
+  s3 --> s0: discard changes
+  s3 --> s1: retry
+  s3 --> s2: close with unsaved changes

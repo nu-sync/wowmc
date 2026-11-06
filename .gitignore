@@ -1,0 +1,29 @@
+/target/
+/dist/
+
+# Local configuration, macro libraries, game caches, and recovery data.
+/config.json
+/library.json
+/library.lock
+/library.json.lock
+/library.json.bak
+*.bak
+*.backup
+macros-cache.txt
+macros-cache.old
+WTF/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Model-checker logs contain absolute machine-specific temporary paths.
+/statecharts/**/tlc*.out
+
+# Local editor and operating-system files.
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store

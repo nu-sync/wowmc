@@ -1,0 +1,15 @@
+---
+title: "Library record lifecycle"
+---
+stateDiagram-v2
+  s0: No record
+  s1: Active
+  s2: Active with history
+  s3: In library trash
+  [*] --> s0
+  s0 --> s1: add
+  s1 --> s2: edit and keep revision
+  s1 --> s3: delete
+  s2 --> s3: delete
+  s3 --> s1: restore
+  s3 --> s2: restore

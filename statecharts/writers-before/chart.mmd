@@ -1,0 +1,21 @@
+---
+title: "Two writers: current behavior"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks NoLostUpdate
+    lg1: Path to the NoLostUpdate bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: Both opened the same library
+  s1: First change saved
+  s2: First change lost
+  [*] --> s0
+  s0 --> s1: first writer saves
+  s1 --> s2: second writer saves
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s1 bugPath
+  class s2 breaks
+  class s2 bugPath

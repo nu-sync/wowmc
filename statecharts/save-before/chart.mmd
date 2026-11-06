@@ -1,0 +1,31 @@
+---
+title: "Editing a macro: current behavior"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks SavedMeansDurable
+    lg1: Breaks MemoryMeansDurable in some cases
+    lg2: Path to the MemoryMeansDurable or SavedMeansDurable bug
+  }
+  class lg0 breaks
+  class lg1 mayBreak
+  class lg2 bugPath
+  s0: Library matches editor
+  s1: Unsaved changes
+  s2: Save failed
+  s3: Editor appears saved but differs from disk
+  [*] --> s0
+  s0 --> s1: edit
+  s1 --> s0: save succeeds
+  s1 --> s2: save fails
+  s2 --> s3: discard changes
+  s3 --> s1: edit
+  s2 --> s0: discard changes
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  classDef mayBreak fill:#fff3e6,stroke:#e8730c,stroke-width:2.5px,color:#b85a06
+  class s0 bugPath
+  class s1 bugPath
+  class s2 mayBreak
+  class s2 bugPath
+  class s3 breaks
+  class s3 bugPath
