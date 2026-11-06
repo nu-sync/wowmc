@@ -27,6 +27,8 @@ cargo run -- export "Ready"
 
 `copy` uses the Windows clipboard; `export` prints the body for scripts or manual copying. `add NAME` without `--file` and `edit NAME` open an editor. Save and close it to finish. Interactive Windows sessions default to Notepad; `VISUAL` or `EDITOR` can specify a blocking editor executable, without arguments.
 
+CLI output uses gold headings, cyan names and commands, violet scopes, green confirmations, and amber warnings. Colors adapt to your terminal and are disabled when output is redirected. Set `$env:NO_COLOR = '1'` to disable styling, or `$env:CLICOLOR_FORCE = '1'` to force color (unset `NO_COLOR` first). `export` and `list --json` always emit undecorated data.
+
 ## Organize and recover
 
 | Task | Command |

@@ -1,15 +1,19 @@
+use anstream::{eprintln, print, println};
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use std::{
     fs,
     io::{self, IsTerminal, Read, Write},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{Command, ExitCode, Stdio},
 };
+use theme::{ACCENT, ERROR, HEADING, MUTED, RESET, SCOPE, SUCCESS, WARNING};
 use wowmc::{candidates, parse_snapshot, revision, snapshots, Library};
 
+mod theme;
+
 #[derive(Parser)]
-#[command(version, about = "A local, independent library for WoW macros")]
+#[command(version, about = "A local, independent library for WoW macros", styles = theme::HELP)]
 struct Cli {
     /// Override the library file (also available as WOWMC_LIBRARY).
     #[arg(long, global = true)]
@@ -113,9 +117,9 @@ fn read_text(path: &Path) -> Result<String> {
 }
 fn next_after_setup(target: &Path) {
     if target.exists() {
-        println!("Next: wowmc import to preview this target's macros, then wowmc import --apply to save new ones.");
+        println!("{HEADING}Next:{RESET} {ACCENT}wowmc import{RESET} to preview this target's macros, then {ACCENT}wowmc import --apply{RESET} to save new ones.");
     } else {
-        println!("No saved cache exists yet. Create a library macro with wowmc add \"My macro\", then preview it with wowmc install \"My macro\".");
+        println!("{WARNING}No saved cache exists yet.{RESET} Create a library macro with {ACCENT}wowmc add \"My macro\"{RESET}, then preview it with {ACCENT}wowmc install \"My macro\"{RESET}.");
     }
 }
 
@@ -132,7 +136,7 @@ fn edit_body(initial: &str) -> Result<(String, PathBuf)> {
     let draft = std::env::temp_dir().join(format!("wowmc-{}.txt", uuid::Uuid::new_v4()));
     fs::write(&draft, initial)?;
     println!(
-        "Edit and save your macro, then close the editor. Draft: {}",
+        "Edit and save your macro, then close the editor. {HEADING}Draft:{RESET} {}",
         draft.display()
     );
     let status = Command::new(editor)
@@ -146,10 +150,20 @@ fn edit_body(initial: &str) -> Result<(String, PathBuf)> {
     Ok((body, draft))
 }
 
-fn main() -> Result<()> {
+fn main() -> ExitCode {
+    match run() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("{ERROR}Error:{RESET} {error:?}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn run() -> Result<()> {
     let cli = Cli::parse();
     let Some(command) = cli.command else {
-        println!("Keep your WoW macros in a local library.\n\nStart with:\n  wowmc setup          Choose an account or character\n  wowmc import         Preview its saved macros\n  wowmc import --apply Save new macros to your library\n  wowmc list           Find a macro\n\nOr create one: wowmc add \"My macro\"\nUse wowmc --help for all commands.");
+        println!("{HEADING}Keep your WoW macros in a local library.{RESET}\n\n{HEADING}Start with:{RESET}\n  {ACCENT}wowmc setup{RESET}          Choose an account or character\n  {ACCENT}wowmc import{RESET}         Preview its saved macros\n  {ACCENT}wowmc import --apply{RESET} Save new macros to your library\n  {ACCENT}wowmc list{RESET}           Find a macro\n\nOr create one: {ACCENT}wowmc add \"My macro\"{RESET}\nUse {ACCENT}wowmc --help{RESET} for all commands.");
         return Ok(());
     };
     let library_path = || wowmc::config::Config::library_path(cli.library.as_deref());
@@ -161,7 +175,11 @@ fn main() -> Result<()> {
                 let mut config = wowmc::config::Config::load(&config_path)?;
                 config.default_target = Some(target.clone());
                 config.save(&config_path)?;
-                println!("Default {} target: {}", scope.label(), target.display());
+                println!(
+                    "{SUCCESS}Default {} target:{RESET} {}",
+                    scope.label(),
+                    target.display()
+                );
                 next_after_setup(&target);
                 return Ok(());
             }
@@ -171,15 +189,15 @@ fn main() -> Result<()> {
                 candidates()
             };
             if paths.is_empty() {
-                println!("No Forever installation found. Run setup --path <edition folder>, or start with an empty library using add.");
+                println!("{WARNING}No Forever installation found.{RESET} Run {ACCENT}setup --path <edition folder>{RESET}, or start with an empty library using {ACCENT}add{RESET}.");
             }
             let mut choices = Vec::new();
             for p in paths {
-                println!("Installation: {}", p.display());
+                println!("{HEADING}Installation:{RESET} {}", p.display());
                 let files = snapshots(&p)?;
                 choices.extend(wowmc::character_targets(&p)?);
                 if files.is_empty() {
-                    println!("  No macro snapshots found. Characters without saved macros may have no file.");
+                    println!("  {MUTED}No macro snapshots found. Characters without saved macros may have no file.{RESET}");
                 }
                 for f in files {
                     match fs::read_to_string(&f)
@@ -193,26 +211,26 @@ fn main() -> Result<()> {
                                 .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                                 .map(|d| d.as_secs());
                             println!(
-                                "  {} ({} macros; modified Unix time {:?})",
+                                "  {} {MUTED}({} macros; modified Unix time {:?}){RESET}",
                                 f.display(),
                                 ms.len(),
                                 modified
                             );
                         }
-                        Err(e) => println!("  {}: {e:#}", f.display()),
+                        Err(e) => println!("  {}: {ERROR}{e:#}{RESET}", f.display()),
                     }
                 }
             }
-            println!("These are local snapshots, which may not reflect current in-game macros. Use import <file> to preview.");
+            println!("{WARNING}These are local snapshots, which may not reflect current in-game macros.{RESET} Use {ACCENT}import <file>{RESET} to preview.");
             if choices.len() == 1 || (!choices.is_empty() && io::stdin().is_terminal()) {
                 let selected = if choices.len() == 1 {
                     Some(0)
                 } else {
-                    println!("Choose a default character (0 to skip):");
+                    println!("{HEADING}Choose a default character (0 to skip):{RESET}");
                     for (i, choice) in choices.iter().enumerate() {
-                        println!("  {}. {}", i + 1, choice.display());
+                        println!("  {ACCENT}{}.{RESET} {}", i + 1, choice.display());
                     }
-                    print!("Selection: ");
+                    print!("{HEADING}Selection:{RESET} ");
                     io::stdout().flush()?;
                     let mut input = String::new();
                     io::stdin().read_line(&mut input)?;
@@ -227,11 +245,14 @@ fn main() -> Result<()> {
                     let mut config = wowmc::config::Config::load(&config_path)?;
                     config.default_target = Some(choices[i].clone());
                     config.save(&config_path)?;
-                    println!("Default character: {}", choices[i].display());
+                    println!(
+                        "{SUCCESS}Default character:{RESET} {}",
+                        choices[i].display()
+                    );
                     next_after_setup(&choices[i]);
                 }
             } else if choices.len() > 1 {
-                println!("Multiple characters found; use setup --target <character file> to choose a default.");
+                println!("{WARNING}Multiple characters found;{RESET} use {ACCENT}setup --target <character file>{RESET} to choose a default.");
             }
         }
         Action::Import {
@@ -251,21 +272,31 @@ fn main() -> Result<()> {
             let mut lib = Library::load(&path)?;
             let source_name = source.to_string_lossy().to_string();
             println!(
-                "Snapshot: {} ({} macros). This may not reflect the current in-game state.",
+                "{HEADING}Snapshot:{RESET} {} {MUTED}({} macros).{RESET} {WARNING}This may not reflect the current in-game state.{RESET}",
                 source.display(),
                 entries.len()
             );
             let plan = lib.plan_import(&entries, &source_name, &scope)?;
             for item in &plan.items {
-                println!("  {} [{}] ({})", item.name, scope, item.decision.label());
+                let status = match item.decision {
+                    wowmc::operations::ImportDecision::New => SUCCESS,
+                    wowmc::operations::ImportDecision::AlreadyImported => MUTED,
+                    wowmc::operations::ImportDecision::NameConflict => WARNING,
+                };
+                println!(
+                    "  {ACCENT}{}{RESET} {SCOPE}[{}]{RESET} {status}({}){RESET}",
+                    item.name,
+                    scope,
+                    item.decision.label()
+                );
             }
             if apply {
                 let count = lib.import(&path, &entries, &source_name, &scope)?;
-                println!("Imported {count} macros into the library. No game files were changed.");
-                println!("Next: wowmc list");
+                println!("{SUCCESS}Imported {count} macros into the library.{RESET} No game files were changed.");
+                println!("{HEADING}Next:{RESET} {ACCENT}wowmc list{RESET}");
             } else {
                 println!(
-                    "Preview only. Re-run with --apply to import {} new macros.",
+                    "{WARNING}Preview only.{RESET} Re-run with {ACCENT}--apply{RESET} to import {} new macros.",
                     plan.count()
                 );
             }
@@ -284,22 +315,22 @@ fn main() -> Result<()> {
                 })
                 .collect();
             if json {
-                println!("{}", serde_json::to_string_pretty(&items)?);
+                std::println!("{}", serde_json::to_string_pretty(&items)?);
             } else {
                 if items.is_empty() {
                     if !q.is_empty() {
                         println!(
-                            "No macros match this search. Run wowmc list to see all active macros."
+                            "{MUTED}No macros match this search.{RESET} Run {ACCENT}wowmc list{RESET} to see all active macros."
                         );
                     } else if lib.macros.iter().any(|m| m.deleted) && !all {
-                        println!("No active macros. Run wowmc list --all to find deleted macros, then wowmc restore <name-or-id>.");
+                        println!("{MUTED}No active macros.{RESET} Run {ACCENT}wowmc list --all{RESET} to find deleted macros, then {ACCENT}wowmc restore <name-or-id>{RESET}.");
                     } else {
-                        println!("Your library is empty. Run wowmc setup, then wowmc import; or create one with wowmc add \"My macro\".");
+                        println!("{MUTED}Your library is empty.{RESET} Run {ACCENT}wowmc setup{RESET}, then {ACCENT}wowmc import{RESET}; or create one with {ACCENT}wowmc add \"My macro\"{RESET}.");
                     }
                 }
                 for m in items {
                     println!(
-                        "{}  {}  [{}]{}",
+                        "{MUTED}{}{RESET}  {ACCENT}{}{RESET}  {SCOPE}[{}]{RESET}{WARNING}{}{RESET}",
                         m.id,
                         m.current.name,
                         m.current.scope,
@@ -313,7 +344,7 @@ fn main() -> Result<()> {
             let lib = Library::load(&path)?;
             let m = &lib.macros[lib.resolve(&query, false)?];
             println!(
-                "{}\nID: {}\nScope: {}\nIcon: {}\nSource: {}\nSaved in library\n\n{}",
+                "{ACCENT}{}{RESET}\n{HEADING}ID:{RESET} {MUTED}{}{RESET}\n{HEADING}Scope:{RESET} {SCOPE}{}{RESET}\n{HEADING}Icon:{RESET} {}\n{HEADING}Source:{RESET} {}\n{SUCCESS}Saved in library{RESET}\n\n{}",
                 m.current.name,
                 m.id,
                 m.current.scope,
@@ -349,14 +380,14 @@ fn main() -> Result<()> {
                 .any(|m| !m.deleted && m.current.name.eq_ignore_ascii_case(&r.name))
             {
                 eprintln!(
-                    "Warning: a macro with this name already exists; use IDs to distinguish them."
+                    "{WARNING}Warning: a macro with this name already exists; use IDs to distinguish them.{RESET}"
                 );
             }
             let id = lib.save_macro(&path, None, r)?;
             if let Some(draft) = draft {
                 let _ = fs::remove_file(draft);
             }
-            println!("Saved in library: {id}");
+            println!("{SUCCESS}Saved in library:{RESET} {MUTED}{id}{RESET}");
         }
         Action::Edit { query } => {
             let path = library_path()?;
@@ -373,9 +404,9 @@ fn main() -> Result<()> {
             if new.body != old.body {
                 lib.save_macro(&path, Some(lib.macros[i].id), new)
                     .with_context(|| format!("Edited text retained at {}", temp.display()))?;
-                println!("Saved in library.");
+                println!("{SUCCESS}Saved in library.{RESET}");
             } else {
-                println!("No changes.");
+                println!("{MUTED}No changes.{RESET}");
             }
             let _ = fs::remove_file(temp);
         }
@@ -383,7 +414,7 @@ fn main() -> Result<()> {
             let path = library_path()?;
             let mut lib = Library::load(&path)?;
             lib.delete_macro(&path, &query)?;
-            println!("Moved to library trash; restore using its ID.");
+            println!("{SUCCESS}Moved to library trash;{RESET} restore using its ID.");
         }
         Action::Restore {
             query,
@@ -392,23 +423,28 @@ fn main() -> Result<()> {
             let path = library_path()?;
             let mut lib = Library::load(&path)?;
             lib.restore_macro(&path, &query, rev)?;
-            println!("Restored in library.");
+            println!("{SUCCESS}Restored in library.{RESET}");
         }
         Action::History { query } => {
             let path = library_path()?;
             let lib = Library::load(&path)?;
             let m = &lib.macros[lib.resolve(&query, true)?];
             for (i, r) in m.history.iter().enumerate() {
-                println!("Revision {} (Unix time {}):\n{}\n", i + 1, r.at, r.body);
+                println!(
+                    "{HEADING}Revision {}{RESET} {MUTED}(Unix time {}):{RESET}\n{}\n",
+                    i + 1,
+                    r.at,
+                    r.body
+                );
             }
             if m.history.is_empty() {
-                println!("No earlier revisions.");
+                println!("{MUTED}No earlier revisions.{RESET}");
             }
         }
         Action::Export { query } => {
             let path = library_path()?;
             let lib = Library::load(&path)?;
-            print!("{}", lib.macros[lib.resolve(&query, false)?].current.body);
+            std::print!("{}", lib.macros[lib.resolve(&query, false)?].current.body);
         }
         Action::Install {
             query,
@@ -422,33 +458,36 @@ fn main() -> Result<()> {
             let m = &lib.macros[lib.resolve(&query, false)?];
             let (plan, backup) = wowmc::install::install(&target, &m.current, apply, replace)?;
             println!(
-                "Target: {}\nMacro: {}\nIntended library scope: {}",
+                "{HEADING}Target:{RESET} {}\n{HEADING}Macro:{RESET} {ACCENT}{}{RESET}\n{HEADING}Intended library scope:{RESET} {SCOPE}{}{RESET}",
                 target.display(),
                 m.current.name,
                 m.current.scope
             );
             match plan {
                 wowmc::install::Plan::AlreadyPresent => {
-                    println!("An identical macro is already in the local snapshot; no change made.")
+                    println!("{SUCCESS}An identical macro is already in the local snapshot; no change made.{RESET}")
                 }
                 wowmc::install::Plan::Append { id, .. } if !apply => {
-                    println!("Preview: append macro with ID {id:016X}.\n\n{}\n\nRe-run with --apply to write it.", m.current.body);
+                    println!("{WARNING}Preview: append macro with ID {id:016X}.{RESET}\n\n{}\n\nRe-run with {ACCENT}--apply{RESET} to write it.", m.current.body);
                 }
                 wowmc::install::Plan::Replace { id, previous, .. } if !apply => {
-                    println!("Preview: replace macro with ID {id:016X}.\n\nExisting:\n{previous}\n\nNew:\n{}\n\nRe-run with --replace --apply to write it.", m.current.body);
+                    println!("{WARNING}Preview: replace macro with ID {id:016X}.{RESET}\n\n{HEADING}Existing:{RESET}\n{previous}\n\n{HEADING}New:{RESET}\n{}\n\nRe-run with {ACCENT}--replace --apply{RESET} to write it.", m.current.body);
                 }
                 wowmc::install::Plan::Append { .. } | wowmc::install::Plan::Replace { .. } => {
                     if let Some(backup) = backup {
-                        println!("Written to local snapshot. Backup: {}", backup.display());
                         println!(
-                            "To preview undo: wowmc restore-cache --backup '{}' --target '{}'",
+                            "{SUCCESS}Written to local snapshot.{RESET} {HEADING}Backup:{RESET} {}",
+                            backup.display()
+                        );
+                        println!(
+                            "{HEADING}To preview undo:{RESET} {ACCENT}wowmc restore-cache --backup '{}' --target '{}'{RESET}",
                             backup.display().to_string().replace('\'', "''"),
                             target.display().to_string().replace('\'', "''")
                         );
                     } else {
-                        println!("Created local snapshot; no prior file existed.");
+                        println!("{SUCCESS}Created local snapshot; no prior file existed.{RESET}");
                     }
-                    println!("Reload WoW, then check in game. A file write is not confirmation the game loaded or retained it.");
+                    println!("{WARNING}Reload WoW, then check in game. A file write is not confirmation the game loaded or retained it.{RESET}");
                 }
             }
         }
@@ -460,14 +499,14 @@ fn main() -> Result<()> {
             let target = wowmc::config::Config::target(target)?;
             let saved = wowmc::install::restore_cache(&target, &backup, apply)?;
             println!(
-                "Target: {}\nRestore from: {}",
+                "{HEADING}Target:{RESET} {}\n{HEADING}Restore from:{RESET} {}",
                 target.display(),
                 backup.display()
             );
             if let Some(saved) = saved {
-                println!("Restored local snapshot. Previous contents backed up at {}. Reload and check in game.",saved.display());
+                println!("{SUCCESS}Restored local snapshot.{RESET} Previous contents backed up at {}. {WARNING}Reload and check in game.{RESET}",saved.display());
             } else {
-                println!("Preview only; add --apply to restore this backup.");
+                println!("{WARNING}Preview only;{RESET} add {ACCENT}--apply{RESET} to restore this backup.");
             }
         }
         Action::Compare { query, target } => {
@@ -477,12 +516,12 @@ fn main() -> Result<()> {
             let lib = Library::load(&path)?;
             let m = &lib.macros[lib.resolve(&query, false)?];
             println!(
-                "Target: {}\nLibrary: {}\n",
+                "{HEADING}Target:{RESET} {}\n{HEADING}Library:{RESET} {ACCENT}{}{RESET}\n",
                 target.display(),
                 m.current.name
             );
             if !target.exists() {
-                println!("No local snapshot exists. This does not indicate the in-game state.");
+                println!("{WARNING}No local snapshot exists. This does not indicate the in-game state.{RESET}");
             } else {
                 let text = fs::read_to_string(&target)?;
                 let entries = parse_snapshot(&text)?;
@@ -491,12 +530,18 @@ fn main() -> Result<()> {
                     .filter(|e| e.name.eq_ignore_ascii_case(&m.current.name))
                     .collect();
                 match found.as_slice() {
-                    []=>println!("Not found in local snapshot."),
-                    [entry]=> {
-                        if entry.name==m.current.name && entry.body==m.current.body.replace("\r\n","\n") && entry.icon==m.current.icon.as_deref().unwrap_or("134400") { println!("Local snapshot matches the library."); }
-                        else { println!("Local snapshot differs.\n\nSnapshot (icon {}):\n{}\n\nLibrary (icon {}):\n{}",entry.icon,entry.body,m.current.icon.as_deref().unwrap_or("134400"),m.current.body); }
+                    [] => println!("{WARNING}Not found in local snapshot.{RESET}"),
+                    [entry] => {
+                        if entry.name == m.current.name
+                            && entry.body == m.current.body.replace("\r\n", "\n")
+                            && entry.icon == m.current.icon.as_deref().unwrap_or("134400")
+                        {
+                            println!("{SUCCESS}Local snapshot matches the library.{RESET}");
+                        } else {
+                            println!("{WARNING}Local snapshot differs.{RESET}\n\n{HEADING}Snapshot (icon {}):{RESET}\n{}\n\n{HEADING}Library (icon {}):{RESET}\n{}", entry.icon, entry.body, m.current.icon.as_deref().unwrap_or("134400"), m.current.body);
+                        }
                     }
-                    _=>println!("Multiple same-named macros exist in the snapshot; comparison is ambiguous."),
+                    _ => println!("{WARNING}Multiple same-named macros exist in the snapshot; comparison is ambiguous.{RESET}"),
                 }
                 if let Ok(t) = fs::metadata(&target)
                     .and_then(|m| m.modified())
@@ -505,9 +550,12 @@ fn main() -> Result<()> {
                             .map_err(std::io::Error::other)
                     })
                 {
-                    println!("Snapshot modified at Unix time {}.", t.as_secs());
+                    println!(
+                        "{MUTED}Snapshot modified at Unix time {}.{RESET}",
+                        t.as_secs()
+                    );
                 }
-                println!("This snapshot is not confirmation of the current in-game state.");
+                println!("{WARNING}This snapshot is not confirmation of the current in-game state.{RESET}");
             }
         }
         Action::Copy { query } => {
@@ -526,7 +574,7 @@ fn main() -> Result<()> {
             if !child.wait()?.success() {
                 bail!("Clipboard copy failed");
             }
-            println!("Copied body. In WoW, create or edit '{}' in scope '{}' and paste it. This does not install the macro.",m.current.name,m.current.scope);
+            println!("{SUCCESS}Copied body.{RESET} In WoW, create or edit '{ACCENT}{}{RESET}' in scope '{SCOPE}{}{RESET}' and paste it. This does not install the macro.",m.current.name,m.current.scope);
         }
     }
     Ok(())

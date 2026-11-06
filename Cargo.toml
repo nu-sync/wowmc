@@ -13,6 +13,7 @@ default = []
 gui = ["dep:eframe"]
 
 [dependencies]
+anstream = "1"
 anyhow = "1"
 atomicwrites = "0.4"
 clap = { version = "4", features = ["derive"] }

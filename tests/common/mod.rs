@@ -21,6 +21,9 @@ impl Fixture {
             .env("APPDATA", self.join("profile"))
             .env("WOWMC_LIBRARY", self.join("library.json"))
             .env("WOWMC_CONFIG", self.join("config.json"))
+            .env_remove("NO_COLOR")
+            .env_remove("CLICOLOR")
+            .env_remove("CLICOLOR_FORCE")
             .env_remove("VISUAL")
             .env_remove("EDITOR");
         command
